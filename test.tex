@@ -1,0 +1,59 @@
+\documentclass{article}
+\usepackage[margin=2.5cm]{geometry}
+\usepackage{codeview}
+\begin{document}
+\section*{codeview test}
+
+Default (input) box, C++:
+\begin{codeview}[input, name=helloworld.cpp]
+#include <iostream>
+
+int main() {
+    std::cout << "Hello world" << std::endl;
+    return 0;
+}
+\end{codeview}
+
+C code with the default settings, then its output:
+\begin{codeview}[input, lang=C]
+// print a value
+printf("Hello World");
+double x = 3.14159 * 2;
+\end{codeview}
+\begin{codeview}[output]
+Hello World
+\end{codeview}
+
+Custom background, Python (numerical method):
+\begin{codeview}[input, bg=blue!50!black, lang=Python, name=newton.py]
+import numpy as np
+
+def newton(f, df, x0, tol=1e-8):
+    for i in range(50):
+        x1 = x0 - f(x0)/df(x0)
+        if abs(x1 - x0) < tol:
+            return x1
+        x0 = x1
+    return x0
+
+print(newton(lambda x: x**2 - 2, lambda x: 2*x, 1.0))
+\end{codeview}
+\begin{codeview}[output, bg=blue!50!black, prompt=first]
+1.414213562373095
+converged in 5 iterations
+\end{codeview}
+
+MATLAB without title bar and line numbers, dark green:
+\begin{codeview}[input, lang=Matlab, bg=green!30!black, nodots, nolinenos]
+x = linspace(0, 2*pi, 100);
+plot(x, sin(x)); % plot
+\end{codeview}
+
+Shell command with output and shadow:
+\begin{codeview}[input, lang=bash, bg=red!40!black, shadow, name=terminal]
+gcc hello.c -o hello && ./hello
+\end{codeview}
+\begin{codeview}[output, bg=red!40!black, prompt=none]
+Hello World
+\end{codeview}
+\end{document}

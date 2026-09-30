@@ -1,0 +1,194 @@
+%% ---------------------------------------------------------------------------
+%%  codeview.sty  --  IDE-style code and shell-output boxes
+%%
+%%  Works with: article, book, report, beamer, standalone (pdfLaTeX, LuaLaTeX,
+%%  XeLaTeX).  Needs: tcolorbox (with the `listings' and `skins' libraries),
+%%  listings, xcolor, tikz  -- all part of a standard TeX Live / MiKTeX.
+%%
+%%  Usage
+%%     \begin{codeview}[input]                 % code, syntax highlighted
+%%     printf("Hello World");
+%%     \end{codeview}
+%%
+%%     \begin{codeview}[output]                % shell-like output
+%%     Hello World
+%%     \end{codeview}
+%%
+%%  Keys (all optional, comma separated; any tcolorbox key also works)
+%%     input / output      box type (default: input)
+%%     bg=<color>          background colour, any xcolor expression
+%%                         (default: near-black), e.g. bg=blue!50!black
+%%     lang=<language>     listings language (default: C++). e.g. C, Python,
+%%                         Matlab, Octave, bash, Java, Fortran, {[ANSI]C}
+%%     name=<text>         file name shown in the title bar (input only),
+%%                         e.g. name=helloworld.cpp
+%%     nodots              hide the three window buttons
+%%     titlebar / notitlebar   force the title bar on / off
+%%     linenos / nolinenos     line numbers on / off (input default: on)
+%%     prompt=all|first|none   prompt style for output (default: all)
+%%     promptsymbol=<text>     default: >>
+%%     fontsize=<macro>        e.g. fontsize=\footnotesize
+%%     shadow                  add a soft drop shadow
+%%     width=<len>, etc.       passed on to tcolorbox
+%%
+%%  Beamer: frames containing codeview must be [fragile].
+%% ---------------------------------------------------------------------------
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesPackage{codeview}[2026/09/30 v1.0 IDE-style code and output boxes]
+
+\RequirePackage{xcolor}
+\RequirePackage{tikz}
+\RequirePackage{listings}
+\lstloadaspects{keywords,directives}
+\RequirePackage[most]{tcolorbox}
+\tcbuselibrary{listings,skins}
+
+%% ------------------------------ colour palette ------------------------------
+\definecolor{cvbg}{HTML}{181818}        % default background
+\definecolor{cvfg}{HTML}{D4D4D4}        % plain text
+\definecolor{cvkeyword}{HTML}{4FA8FF}   % int, for, if, return ...
+\definecolor{cvdirective}{HTML}{C86BFF} % #include, #define
+\definecolor{cvstring}{HTML}{F0916B}    % "strings"
+\definecolor{cvcomment}{HTML}{6A9955}   % comments
+\definecolor{cvfunction}{HTML}{E8E8A0}  % main, printf, print ...
+\definecolor{cvtype}{HTML}{2FD8C0}      % std, cout, endl ...
+\definecolor{cvnumber}{HTML}{B5CEA8}    % 42, 3.14
+\definecolor{cvlineno}{HTML}{858585}    % line numbers
+\definecolor{cvprompt}{HTML}{7EE787}    % >> prompt
+\definecolor{cvdot@r}{HTML}{FF5F57}
+\definecolor{cvdot@y}{HTML}{FEBC2E}
+\definecolor{cvdot@g}{HTML}{28C840}
+
+%% ------------------------------ internal state ------------------------------
+\newif\ifcv@dots
+\newif\ifcv@hasbar
+\def\cv@style{cvinput}
+\def\cv@lang{C++}
+\def\cv@numbers{left}
+\def\cv@numstyle{\cv@linenostyle}
+\def\cv@margin{2.4em}
+\def\cv@name{}
+\def\cv@bgcolor{cvbg}
+\def\cv@fontsize{\small}
+\def\cv@promptsymbol{>>}
+
+\newcommand\cv@linenostyle[1]{\color{cvlineno}\ttfamily\footnotesize #1}
+\newcommand\cv@promptall[1]{\color{cvprompt}\ttfamily\cv@fontsize\cv@promptsymbol}
+\newcommand\cv@promptfirst[1]{\ifnum#1=1 \color{cvprompt}\ttfamily\cv@fontsize\cv@promptsymbol\fi}
+
+%% Rebuild the listings option string from the current state.
+\newcommand\cv@update{%
+  \edef\cv@tmp{%
+    \noexpand\tcbset{listing options={%
+      style=\cv@style,%
+      language={\cv@lang},%
+      numbers=\cv@numbers,%
+      numberstyle=\noexpand\cv@numstyle,%
+      xleftmargin=\cv@margin,%
+      basicstyle=\noexpand\ttfamily\noexpand\cv@fontsize\noexpand\color{cvfg}%
+    }}}%
+  \cv@tmp}
+
+%% Title bar with the three window buttons and an optional file name.
+\newcommand\cv@titlebar{%
+  \ifcv@dots
+    \begin{tikzpicture}[baseline=-0.6ex]
+      \fill[cvdot@r] (0,0)      circle (0.085);
+      \fill[cvdot@y] (0.28,0)   circle (0.085);
+      \fill[cvdot@g] (0.56,0)   circle (0.085);
+    \end{tikzpicture}%
+    \ifx\cv@name\@empty\else\hspace{1.2em}\fi
+  \fi
+  \ifx\cv@name\@empty\else{\ttfamily\footnotesize\color{cvlineno!40!white}\cv@name}\fi}
+
+%% ------------------------------ syntax highlighting -------------------------
+\lstdefinestyle{cvinput}{%
+  keywordstyle=\color{cvkeyword},%
+  directivestyle=\color{cvdirective},%
+  stringstyle=\color{cvstring},%
+  commentstyle=\color{cvcomment}\itshape,%
+  identifierstyle=\color{cvfg},%
+  emphstyle=\color{cvtype},%
+  emphstyle={[2]\color{cvfunction}},%
+  emph={std,cout,cin,cerr,endl,string,vector,map,size_t,FILE,stdout,stdin,%
+        stderr,np,numpy,plt,math,self,true,false,True,False,None,NULL,nullptr,%
+        pi,eps,Inf,NaN},%
+  emph={[2]main,printf,scanf,fprintf,sprintf,puts,print,len,range,disp,input,%
+        sqrt,sin,cos,tan,exp,log,abs,pow,zeros,ones,eye,linspace,plot,figure,%
+        xlabel,ylabel,title,legend,solve,inv,det,norm,fzero,ode45,quad,%
+        integral,interp1,polyfit,polyval,echo,printf,cat,grep,cd,ls,%
+        cout,malloc,free,sizeof,fabs,floor,ceil,round,fmax,fmin,array,%
+        arange,dot,cross,meshgrid,size,length,numel,find,sum,prod,max,min},%
+  showstringspaces=false,%
+  aboveskip=0pt, belowskip=0pt,%
+  tabsize=4,%
+  breaklines=true,%
+  breakatwhitespace=false,%
+  columns=fullflexible,%
+  keepspaces=true,%
+  upquote=false,%
+  numbersep=8pt,%
+  literate={0}{{\color{cvnumber}0}}1 {1}{{\color{cvnumber}1}}1
+           {2}{{\color{cvnumber}2}}1 {3}{{\color{cvnumber}3}}1
+           {4}{{\color{cvnumber}4}}1 {5}{{\color{cvnumber}5}}1
+           {6}{{\color{cvnumber}6}}1 {7}{{\color{cvnumber}7}}1
+           {8}{{\color{cvnumber}8}}1 {9}{{\color{cvnumber}9}}1,%
+}
+
+\lstdefinestyle{cvoutput}{%
+  identifierstyle=\color{cvfg},%
+  showstringspaces=false,%
+  aboveskip=0pt, belowskip=0pt,%
+  tabsize=4,%
+  breaklines=true,%
+  columns=fullflexible,%
+  keepspaces=true,%
+  upquote=false,%
+  numbersep=6pt,%
+}
+
+%% ------------------------------ keys ----------------------------------------
+\tcbset{
+  cv@base/.style={
+    enhanced, arc=3.5mm, boxrule=0pt,
+    left=2mm, right=2mm, top=1.6mm, bottom=1.6mm, boxsep=1mm,
+    toptitle=1.2mm, bottomtitle=1.2mm, lefttitle=3.5mm,
+    colframe=black, coltitle=cvfg, fonttitle=\ttfamily,
+    before skip=\medskipamount, after skip=\medskipamount,
+    listing only, title={},
+  },
+  input/.code={%
+    \cv@dotstrue\def\cv@name{}%
+    \def\cv@style{cvinput}\def\cv@numbers{left}\def\cv@numstyle{\cv@linenostyle}%
+    \def\cv@margin{2.4em}\cv@update
+    \tcbset{titlebar}},
+  output/.code={%
+    \cv@dotsfalse\def\cv@name{}\def\cv@style{cvoutput}\def\cv@lang{}\def\cv@numbers{left}%
+    \def\cv@numstyle{\cv@promptall}\def\cv@margin{2.4em}\cv@update
+    \tcbset{notitlebar}},
+  bg/.code={%
+    \def\cv@bgcolor{#1}%
+    \tcbset{colback={#1}, colbacktitle={#1!85!white}}},
+  lang/.code={\def\cv@lang{#1}\cv@update},
+  name/.code={\def\cv@name{#1}\tcbset{titlebar}},
+  nodots/.code={\cv@dotsfalse\ifx\cv@name\@empty\tcbset{notitlebar}\fi},
+  dots/.code={\cv@dotstrue\tcbset{titlebar}},
+  titlebar/.style={title={\cv@titlebar}},
+  notitlebar/.style={title={}},
+  linenos/.code={\def\cv@numbers{left}\cv@update},
+  nolinenos/.code={\def\cv@numbers{none}\def\cv@margin{0pt}\cv@update},
+  prompt/.code={%
+    \def\cv@arg{#1}\def\cv@tmpa{all}\def\cv@tmpb{first}\def\cv@tmpc{none}%
+    \ifx\cv@arg\cv@tmpa \def\cv@numstyle{\cv@promptall}\def\cv@numbers{left}\fi
+    \ifx\cv@arg\cv@tmpb \def\cv@numstyle{\cv@promptfirst}\def\cv@numbers{left}\fi
+    \ifx\cv@arg\cv@tmpc \def\cv@numbers{none}\def\cv@margin{0pt}\fi
+    \cv@update},
+  promptsymbol/.code={\def\cv@promptsymbol{#1}},
+  fontsize/.code={\def\cv@fontsize{#1}\cv@update},
+  shadow/.style={drop fuzzy shadow},
+}
+
+%% ------------------------------ environment ---------------------------------
+\newtcblisting{codeview}[1][]{%
+  cv@base, colback=cvbg, colbacktitle=cvbg!85!white,
+  input, #1}
